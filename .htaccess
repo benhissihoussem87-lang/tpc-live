@@ -1,0 +1,14 @@
+DirectoryIndex main.php
+
+# Security: don’t list directories
+Options -Indexes
+
+# Optional rewrite base (adjust if the folder name is not /tpc)
+RewriteEngine On
+RewriteBase /tpc/
+
+# Ensure UTF-8 for correct accent rendering
+AddDefaultCharset UTF-8
+
+# Allow larger forms for facture modification
+php_value max_input_vars 5000

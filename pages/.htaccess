@@ -1,0 +1,44 @@
+# Default: block direct access to PHP partials under /pages
+<FilesMatch "\.php$">
+    Require all denied
+</FilesMatch>
+
+# Allow the printable scripts
+<Files "ModeleFacture.php">
+    Require all granted
+</Files>
+<Files "ModeleBordereaux.php">
+    Require all granted
+</Files>
+<Files "ModeleOffre.php">
+    Require all granted
+</Files>
+<Files "ModeleOffrePrix.php">
+    Require all granted
+</Files>
+<Files "ModeleBordereau.php">
+    Require all granted
+</Files>
+<Files "ModeleAvoir.php">
+    Require all granted
+</Files>
+<Files "rapport.php">
+    Require all granted
+</Files>
+<Files "nonregle.php">
+    Require all granted
+</Files>
+<Files "ModifierClient.php">
+    Require all granted
+</Files>
+<Files "updateClient.php">
+    Require all granted
+</Files>
+
+# Allow static assets (CSS, JS, images, PDF) anywhere under /pages
+<FilesMatch "\.(css|js|png|jpe?g|gif|svg|pdf)$">
+    Require all granted
+</FilesMatch>
+
+# Graceful redirect for other denied requests
+ErrorDocument 403 /tpc/main.php
