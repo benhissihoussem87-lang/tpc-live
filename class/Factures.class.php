@@ -171,7 +171,22 @@ class Factures {
 
     // ---------------- Queries ----------------
     public function AfficherFactures() {
-        $sql = "SELECT f.*, clt.nom_client, clt.adresse, clt.numexonoration FROM facture AS f, clients AS clt WHERE f.client = clt.id ORDER BY f.date DESC";
+        // Order by normalized date (supports both 'YYYY-MM-DD' and 'DD/MM/YYYY')
+        // then by numeric part of num_fact to keep the newest numbers at the end.
+        $sql = "
+            SELECT f.*, clt.nom_client, clt.adresse, clt.numexonoration
+            FROM facture AS f
+            JOIN clients AS clt ON f.client = clt.id
+            ORDER BY
+                CASE
+                    WHEN f.date REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+                        THEN STR_TO_DATE(f.date, '%Y-%m-%d')
+                    WHEN f.date REGEXP '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
+                        THEN STR_TO_DATE(f.date, '%d/%m/%Y')
+                    ELSE NULL
+                END ASC,
+                CAST(SUBSTRING_INDEX(f.num_fact,'/',1) AS UNSIGNED) ASC
+        ";
         $req = $this->cnx->query($sql);
         return $req->fetchAll();
     }
@@ -185,7 +200,15 @@ class Factures {
             JOIN clients AS clt ON f.client = clt.id
             LEFT JOIN reglement AS r ON r.num_fact = f.num_fact
             WHERE LOWER(TRIM(COALESCE(r.etat_reglement, 'non'))) NOT IN ('oui','avoir')
-            ORDER BY f.date DESC
+            ORDER BY
+                CASE
+                    WHEN f.date REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+                        THEN STR_TO_DATE(f.date, '%Y-%m-%d')
+                    WHEN f.date REGEXP '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
+                        THEN STR_TO_DATE(f.date, '%d/%m/%Y')
+                    ELSE NULL
+                END ASC,
+                CAST(SUBSTRING_INDEX(f.num_fact,'/',1) AS UNSIGNED) ASC
         ";
         $req = $this->cnx->query($sql);
         return $req->fetchAll();
@@ -193,7 +216,20 @@ class Factures {
 
     // Some pages expect a method named AfficherAllFactures()
     public function AfficherAllFactures() {
-        $sql = "SELECT f.*, clt.nom_client FROM facture AS f JOIN clients AS clt ON f.client = clt.id ORDER BY f.date DESC";
+        $sql = "
+            SELECT f.*, clt.nom_client
+            FROM facture AS f
+            JOIN clients AS clt ON f.client = clt.id
+            ORDER BY
+                CASE
+                    WHEN f.date REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+                        THEN STR_TO_DATE(f.date, '%Y-%m-%d')
+                    WHEN f.date REGEXP '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
+                        THEN STR_TO_DATE(f.date, '%d/%m/%Y')
+                    ELSE NULL
+                END ASC,
+                CAST(SUBSTRING_INDEX(f.num_fact,'/',1) AS UNSIGNED) ASC
+        ";
         $req = $this->cnx->query($sql);
         return $req->fetchAll();
     }

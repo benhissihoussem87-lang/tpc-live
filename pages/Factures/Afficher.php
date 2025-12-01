@@ -10,8 +10,14 @@ $factures=$facture->AfficherFactures();
 $factureYears = [];
 if (!empty($factures)) {
     foreach ($factures as $row) {
-        $year = isset($row['date']) ? substr((string)$row['date'], 0, 4) : '';
-        if (preg_match('/^\d{4}$/', $year)) {
+        $dateStr = isset($row['date']) ? (string)$row['date'] : '';
+        $year = '';
+        if (preg_match('/^(\d{4})-\d{2}-\d{2}$/', $dateStr, $m)) {
+            $year = $m[1];
+        } elseif (preg_match('/^\d{2}\/\d{2}\/(\d{4})$/', $dateStr, $m)) {
+            $year = $m[1];
+        }
+        if ($year !== '') {
             $factureYears[$year] = true;
         }
     }
@@ -79,8 +85,6 @@ $anne=date('Y');
                                     width="100%"
                                     cellspacing="0"
                                     data-year-column="1"
-                                    data-order-column="1"
-                                    data-order-direction="asc"
                                 >
                                     <thead>
                                         <tr>
