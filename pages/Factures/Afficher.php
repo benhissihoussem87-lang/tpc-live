@@ -85,8 +85,7 @@ $anne=date('Y');
                                     width="100%"
                                     cellspacing="0"
                                     data-year-column="1"
-                                    data-order-column="1"
-                                    data-order-direction="asc"
+                                    data-ordering="false"
                                 >
                                     <thead>
                                         <tr>

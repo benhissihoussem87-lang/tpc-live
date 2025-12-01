@@ -218,10 +218,17 @@
       }
       options.order = [];
       options.autoWidth = false;
-      var orderColAttr = $table.attr('data-order-column');
-      if (typeof orderColAttr !== 'undefined') {
-        var orderDir = $table.attr('data-order-direction') || 'desc';
-        options.order = [[parseInt(orderColAttr, 10) || 0, orderDir]];
+
+      // Allow per-table disabling of ordering entirely.
+      var orderingAttr = $table.attr('data-ordering');
+      if (typeof orderingAttr !== 'undefined' && orderingAttr === 'false') {
+        options.ordering = false;
+      } else {
+        var orderColAttr = $table.attr('data-order-column');
+        if (typeof orderColAttr !== 'undefined') {
+          var orderDir = $table.attr('data-order-direction') || 'desc';
+          options.order = [[parseInt(orderColAttr, 10) || 0, orderDir]];
+        }
       }
       var dt = null;
       if ($.fn.DataTable) {
