@@ -85,6 +85,8 @@ $anne=date('Y');
                                     width="100%"
                                     cellspacing="0"
                                     data-year-column="1"
+                                    data-order-column="1"
+                                    data-order-direction="asc"
                                 >
                                     <thead>
                                         <tr>
@@ -336,17 +338,31 @@ document.addEventListener('DOMContentLoaded', function(){
 <!--------------- Fin Modal Supprimer Facture et Adresse Facture --------------->
 <?php
   $yearValue = '';
-  if (!empty($key['date'])) {
-    $maybeYear = substr((string)$key['date'], 0, 4);
-    if (preg_match('/^\\d{4}$/', $maybeYear)) { $yearValue = $maybeYear; }
+  $dateValue = (string)($key['date'] ?? '');
+  // Normalize year for filters (supports YYYY-MM-DD and DD/MM/YYYY)
+  if ($dateValue !== '') {
+    if (preg_match('/^(\\d{4})-\\d{2}-\\d{2}$/', $dateValue, $m)) {
+      $yearValue = $m[1];
+    } elseif (preg_match('/^\\d{2}\\/\\d{2}\\/(\\d{4})$/', $dateValue, $m)) {
+      $yearValue = $m[1];
+    }
   }
-  $searchText = strtolower(trim(($key['num_fact'] ?? '').' '.($key['date'] ?? '').' '.($key['nom_client'] ?? '').' '.($key['numexonoration'] ?? '').' '.($bonCommandeFacture['numboncommande'] ?? '')));
+  // Sort key for DataTables: always YYYY-MM-DD when possible
+  $sortDate = $dateValue;
+  if (preg_match('/^\\d{2}\\/\\d{2}\\/\\d{4}$/', $dateValue)) {
+    // Convert DD/MM/YYYY -> YYYY-MM-DD
+    $dt = DateTime::createFromFormat('d/m/Y', $dateValue);
+    if ($dt !== false) {
+      $sortDate = $dt->format('Y-m-d');
+    }
+  }
+  $searchText = strtolower(trim(($key['num_fact'] ?? '').' '.($dateValue ?: '').' '.($key['nom_client'] ?? '').' '.($key['numexonoration'] ?? '').' '.($bonCommandeFacture['numboncommande'] ?? '')));
 ?>
 											 <tr<?php if ($yearValue !== '') { ?> data-year-values="<?= htmlspecialchars($yearValue) ?>"<?php } ?> data-search-text="<?= htmlspecialchars($searchText) ?>">
 												<td>
 												<a href="?Factures&Projets=<?=$key['num_fact']?>" class="btn btn-success"><?=$key['num_fact']?></a>
 												</td>
-												 <td><?=$key['date']?></td>
+												 <td data-order="<?= htmlspecialchars($sortDate) ?>"><?= htmlspecialchars($dateValue) ?></td>
 												<td><?=$key['nom_client']?></td>
 												<td>
 												<?php if(empty($bonCommandeFacture)){
