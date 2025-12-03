@@ -552,23 +552,24 @@ html,body{ background:#f6f6f6; margin:0; color:#111; font-family:var(--font) }
       if ($val !== '') { $knownAdrs[$val] = true; }
     }
     $printedSansAdresse = false;
-    // Collect SANS ADRESSE lines
-    $sansAdresseLines = [];
-    foreach ($ProjetsFacture as $projet) {
-      $adrLine = trim((string)($projet['adresseClient'] ?? ''));
-      if ($adrLine !== '' && isset($knownAdrs[$adrLine])) {
-        continue; // already printed in a named address section
+    if ($nbAdresse > 0) {
+      // Collect SANS ADRESSE lines
+      $sansAdresseLines = [];
+      foreach ($ProjetsFacture as $projet) {
+        $adrLine = trim((string)($projet['adresseClient'] ?? ''));
+        if ($adrLine !== '' && isset($knownAdrs[$adrLine])) {
+          continue; // already printed in a named address section
+        }
+        $sansAdresseLines[] = $projet;
       }
-      $sansAdresseLines[] = $projet;
-    }
-    if (!empty($sansAdresseLines)) {
-      echo '<tr data-kind="section"><td class="desc" colspan="4" style="font-weight:700;text-decoration:underline" contenteditable="true">SANS ADRESSE</td></tr>';
-      $printedSansAdresse = true;
-      // For forfaitaire: aggregate Total H.T across all SANS ADRESSE lines,
-      // and show it only on the first ENS line.
-      $ensIndexSans = null;
-      $sansTotalHT  = 0.0;
-      if ($isForfaitaire) {
+
+      if (!empty($sansAdresseLines)) {
+        echo '<tr data-kind="section"><td class="desc" colspan="4" style="font-weight:700;text-decoration:underline" contenteditable="true">SANS ADRESSE</td></tr>';
+        $printedSansAdresse = true;
+
+        // Compute total HT across SANS ADRESSE lines and remember first ENS index
+        $ensIndexSans = null;
+        $sansTotalHT  = 0.0;
         foreach ($sansAdresseLines as $idx => $p) {
           $qte         = $p['qte'] ?? '';
           $prixUnit    = $p['prix_unit_htv'] ?? '';
@@ -593,51 +594,68 @@ html,body{ background:#f6f6f6; margin:0; color:#111; font-family:var(--font) }
         if ($ensIndexSans === null) {
           $ensIndexSans = 0;
         }
-      }
-      foreach ($sansAdresseLines as $idx => $projet) {
-        $adrLine = trim((string)($projet['adresseClient'] ?? ''));
-        $qte  = $projet['qte'] ?? '';
-        $prixUnit = $projet['prix_unit_htv'] ?? '';
-        $prixForfait = $projet['prixForfitaire'] ?? '';
-        $prixTTC = $projet['prixTTC'] ?? '';
-        $pu   = ($qte !== 'ENS' && $qte!=='') ? $prixUnit : $prixForfait;
-        $pth  = null;
-        if (!empty($prixForfait)) $pth = (float)$prixForfait;
-        elseif ($qte!=='' && $qte!=='ENS' && $prixUnit!=='') $pth = (float)$qte * (float)$prixUnit;
-        elseif ($prixTTC !== '') {
-          $rate = $isExonore ? 0.0 : 0.19;
-          $pth = $rate > 0 ? ((float)$prixTTC / (1.0 + $rate)) : (float)$prixTTC;
-        }
-        if (($pu === '' || $pu === null) && $prixTTC !== '') {
-          $rate = $isExonore ? 0.0 : 0.19;
-          $baseHT = $rate > 0 ? ((float)$prixTTC / (1.0 + $rate)) : (float)$prixTTC;
-          $qty = (is_numeric($qte) && (float)$qte > 0) ? (float)$qte : 1.0;
-          $pu = $baseHT / $qty;
-          if (!is_numeric($pth)) { $pth = $baseHT; }
-        }
-        $desc = $projet['projet_classement'] ?? ($projet['classement'] ?? ($projet['projet_designation'] ?? ($projet['designation'] ?? '')));
-        if ($desc === '' && isset($projet['projet'])) { $desc = 'Projet '.(string)$projet['projet']; }
-        $desc = trim((string)$desc);
-        if ($desc === '') { $desc = 'INSPECTION PERIODIQUE'; }
-        $puDisplay  = $pu;
-        $pthDisplay = $pth;
-        if ($isForfaitaire) {
-          if ($idx === $ensIndexSans) {
-            $puDisplay  = '';
-            $pthDisplay = $sansTotalHT;
-          } else {
-            $puDisplay  = '';
-            $pthDisplay = null;
+
+        // Print all SANS ADRESSE lines: keep their PU, but show total HT only on the ENS row
+        foreach ($sansAdresseLines as $idx => $projet) {
+          $qte         = $projet['qte'] ?? '';
+          $prixUnit    = $projet['prix_unit_htv'] ?? '';
+          $prixForfait = $projet['prixForfitaire'] ?? '';
+          $prixTTC     = $projet['prixTTC'] ?? '';
+
+          $pu  = ($qte !== 'ENS' && $qte !== '') ? $prixUnit : $prixForfait;
+          $pth = null;
+
+          if ($prixForfait !== '' && $prixForfait !== null) {
+            $pth = (float)$prixForfait;
+          } elseif ($qte !== '' && $qte !== 'ENS' && $prixUnit !== '') {
+            $pth = (float)$qte * (float)$prixUnit;
+          } elseif ($prixTTC !== '') {
+            $rate = $isExonore ? 0.0 : 0.19;
+            $pth  = $rate > 0 ? ((float)$prixTTC / (1.0 + $rate)) : (float)$prixTTC;
           }
+
+          if (($pu === '' || $pu === null) && $prixTTC !== '') {
+            $rate   = $isExonore ? 0.0 : 0.19;
+            $baseHT = $rate > 0 ? ((float)$prixTTC / (1.0 + $rate)) : (float)$prixTTC;
+            $qty    = (is_numeric($qte) && (float)$qte > 0) ? (float)$qte : 1.0;
+            $pu     = $baseHT / $qty;
+            if (!is_numeric($pth)) { $pth = $baseHT; }
+          }
+
+          $desc = $projet['projet_classement']
+            ?? ($projet['classement']
+            ?? ($projet['projet_designation']
+            ?? ($projet['designation'] ?? '')));
+
+          if ($desc === '' && isset($projet['projet'])) {
+            $desc = 'Projet ' . (string)$projet['projet'];
+          }
+
+          $desc = trim((string)$desc);
+          if ($desc === '') {
+            $desc = 'INSPECTION PERIODIQUE';
+          }
+
+          $puDisplay  = $pu;
+          $pthDisplay = $pth;
+          if ($isForfaitaire) {
+            if ($idx === $ensIndexSans) {
+              $puDisplay  = '';
+              $pthDisplay = $sansTotalHT;
+            } else {
+              $puDisplay  = '';
+              $pthDisplay = null;
+            }
+          }
+          ?>
+          <tr>
+            <td class="desc" contenteditable="true"><?= htmlspecialchars($desc) ?></td>
+            <td class="t-center" contenteditable="true"><?= htmlspecialchars($qte) ?></td>
+            <td class="t-center" contenteditable="true"><?= htmlspecialchars($puDisplay) ?></td>
+            <td class="t-right" contenteditable="true"><?= $pthDisplay !== null ? number_format($pthDisplay,3,'.','') : '' ?></td>
+          </tr>
+          <?php
         }
-        ?>
-        <tr>
-          <td class="desc" contenteditable="true"><?= htmlspecialchars($desc) ?></td>
-          <td class="t-center" contenteditable="true"><?= htmlspecialchars($qte) ?></td>
-          <td class="t-center" contenteditable="true"><?= htmlspecialchars($puDisplay) ?></td>
-          <td class="t-right" contenteditable="true"><?= $pthDisplay!==null ? number_format($pthDisplay,3,'.','') : '' ?></td>
-        </tr>
-        <?php
       }
     }
   ?>
