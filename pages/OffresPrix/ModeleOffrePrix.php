@@ -91,21 +91,201 @@ ob_start();
 $addressLabels = [];
 foreach ($adressesClient as $a) {
   $label = is_array($a) ? ($a['adresseClient'] ?? ($a[0] ?? '')) : (string)$a;
+  $label = trim((string)$label);
   if ($label !== '') $addressLabels[] = $label;
 }
 if (!empty($addressLabels)) {
+  $addressLabels = array_values(array_unique($addressLabels));
+
+  // Group rows by known address and collect lines without any address
   $groups = [];
+  $sansAdresseLines = [];
   foreach ($rows as $r){
-    $lab = $r['adresseClient'] ?? ($r['adresse'] ?? 'AUTRE');
-    $groups[$lab][] = $r;
+    $adrLine = trim((string)($r['adresseClient'] ?? ($r['adresse'] ?? '')));
+    if ($adrLine === '' || !in_array($adrLine, $addressLabels, true)) {
+      $sansAdresseLines[] = $r;
+    } else {
+      $groups[$adrLine][] = $r;
+    }
   }
+
+  // Named address sections (with ENS aggregation in forfaitaire mode)
   foreach ($addressLabels as $label){
     if (!isset($groups[$label])) continue;
     echo '<tr class="address-title"><td colspan="4" contenteditable="true">'.htmlspecialchars($label).'</td></tr>';
-    foreach ($groups[$label] as $projet){
+
+    $ensIndexAddr = null;
+    $addrTotalHT  = 0.0;
+    foreach ($groups[$label] as $idx => $p) {
+      $qte         = $p['qte'] ?? '';
+      $prixUnit    = $p['prix_unit_htv'] ?? '';
+      $prixForfait = $p['prixForfitaire'] ?? '';
+      if ($ensIndexAddr === null && $qte === 'ENS') {
+        $ensIndexAddr = $idx;
+      }
+      if ($verifForfitaireOffre === 'forfitaire' && $prixForfait !== '') {
+        $lineHT = (float)$prixForfait;
+      } else {
+        $lineHT = ($qte!=='ENS' && $qte!=='') ? (float)($p['qte'] ?? 0) * (float)($p['prix_unit_htv'] ?? 0)
+                                              : (float)($p['prixForfitaire'] ?? 0);
+      }
+      $addrTotalHT += $lineHT;
+    }
+    if ($ensIndexAddr === null) {
+      $ensIndexAddr = 0;
+    }
+
+    foreach ($groups[$label] as $idx => $projet){
       $qte = $projet['qte'] ?? '';
       $pu  = ($qte!=='ENS' && $qte!=='') ? ($projet['prix_unit_htv'] ?? '') : ($projet['prixForfitaire'] ?? '');
       if ($verifForfitaireOffre === 'forfitaire' && ($projet['prixForfitaire'] ?? '') !== '') {
+        $pth = (float)$projet['prixForfitaire'];
+      } else {
+        $pth = ($qte!=='ENS' && $qte!=='') ? (float)($projet['qte'] ?? 0) * (float)($projet['prix_unit_htv'] ?? 0)
+                                           : (float)($projet['prixForfitaire'] ?? 0);
+      }
+      $totalHT += $pth;
+      $desc = $projet['projet_classement'] ?? ($projet['classement'] ?? ($projet['projet_designation'] ?? ($projet['designation'] ?? '')));
+      $desc = trim((string)$desc);
+      if ($desc === '') { $desc = 'INSPECTION PERIODIQUE'; }
+
+      $puDisplay  = $pu;
+      $pthDisplay = $pth;
+      if ($verifForfitaireOffre === 'forfitaire') {
+        if ($idx === $ensIndexAddr) {
+          $puDisplay  = '';
+          $pthDisplay = $addrTotalHT;
+        } else {
+          $puDisplay  = '';
+          $pthDisplay = null;
+        }
+      }
+
+      echo '<tr class="item-row">';
+      echo '<td class="desc" contenteditable="true">'.htmlspecialchars($desc).'</td>';
+      echo '<td class="t-center" contenteditable="true">'.htmlspecialchars($qte).'</td>';
+      echo '<td class="t-center" contenteditable="true">'.htmlspecialchars($puDisplay).'</td>';
+      echo '<td class="t-right" contenteditable="true">'.($pthDisplay !== null ? number_format($pthDisplay,3,'.','') : '').'</td>';
+      echo '</tr>';
+    }
+  }
+
+  // Additional block for lines without any address (or not matching a known one)
+  if (!empty($sansAdresseLines)) {
+    echo '<tr class="address-title"><td colspan="4" contenteditable="true">SANS ADRESSE</td></tr>';
+
+    $ensIndexSans = null;
+    $sansTotalHT  = 0.0;
+    foreach ($sansAdresseLines as $idx => $p) {
+      $qte         = $p['qte'] ?? '';
+      $prixUnit    = $p['prix_unit_htv'] ?? '';
+      $prixForfait = $p['prixForfitaire'] ?? '';
+      if ($ensIndexSans === null && $qte === 'ENS') {
+        $ensIndexSans = $idx;
+      }
+      if ($verifForfitaireOffre === 'forfitaire' && $prixForfait !== '') {
+        $lineHT = (float)$prixForfait;
+      } else {
+        $lineHT = ($qte!=='ENS' && $qte!=='') ? (float)($p['qte'] ?? 0) * (float)($p['prix_unit_htv'] ?? 0)
+                                              : (float)($p['prixForfitaire'] ?? 0);
+      }
+      $sansTotalHT += $lineHT;
+    }
+    if ($ensIndexSans === null) {
+      $ensIndexSans = 0;
+    }
+
+    foreach ($sansAdresseLines as $idx => $projet){
+      $qte = $projet['qte'] ?? '';
+      $pu  = ($qte!=='ENS' && $qte!=='') ? ($projet['prix_unit_htv'] ?? '') : ($projet['prixForfitaire'] ?? '');
+      if ($verifForfitaireOffre === 'forfitaire' && ($projet['prixForfitaire'] ?? '') !== '') {
+        $pth = (float)$projet['prixForfitaire'];
+      } else {
+        $pth = ($qte!=='ENS' && $qte!=='') ? (float)($projet['qte'] ?? 0) * (float)($projet['prix_unit_htv'] ?? 0)
+                                           : (float)($projet['prixForfitaire'] ?? 0);
+      }
+      $totalHT += $pth;
+      $desc = $projet['projet_classement'] ?? ($projet['classement'] ?? ($projet['projet_designation'] ?? ($projet['designation'] ?? '')));
+      $desc = trim((string)$desc);
+      if ($desc === '') { $desc = 'INSPECTION PERIODIQUE'; }
+
+      $puDisplay  = $pu;
+      $pthDisplay = $pth;
+      if ($verifForfitaireOffre === 'forfitaire') {
+        $puDisplay = '';
+        if ($idx === $ensIndexSans) {
+          $pthDisplay = $sansTotalHT;
+        } else {
+          $pthDisplay = null;
+        }
+      }
+
+      echo '<tr class="item-row">';
+      echo '<td class="desc" contenteditable="true">'.htmlspecialchars($desc).'</td>';
+      echo '<td class="t-center" contenteditable="true">'.htmlspecialchars($qte).'</td>';
+      echo '<td class="t-center" contenteditable="true">'.htmlspecialchars($puDisplay).'</td>';
+      echo '<td class="t-right" contenteditable="true">'.($pthDisplay !== null ? number_format($pthDisplay,3,'.','') : '').'</td>';
+      echo '</tr>';
+    }
+  }
+} else {
+  // No address grouping
+  if ($verifForfitaireOffre === 'forfitaire') {
+    // Aggregate all lines into a single ENS total, like facture forfaitaire without addresses
+    $ensIndexAll = null;
+    $allTotalHT  = 0.0;
+    foreach ($rows as $idx => $p) {
+      $qte         = $p['qte'] ?? '';
+      $prixUnit    = $p['prix_unit_htv'] ?? '';
+      $prixForfait = $p['prixForfitaire'] ?? '';
+      if ($ensIndexAll === null && $qte === 'ENS') {
+        $ensIndexAll = $idx;
+      }
+      if ($prixForfait !== '') {
+        $lineHT = (float)$prixForfait;
+      } else {
+        $lineHT = ($qte!=='ENS' && $qte!=='') ? (float)($p['qte'] ?? 0) * (float)($p['prix_unit_htv'] ?? 0)
+                                              : (float)($p['prixForfitaire'] ?? 0);
+      }
+      $allTotalHT += $lineHT;
+    }
+    if ($ensIndexAll === null) {
+      $ensIndexAll = 0;
+    }
+
+    foreach ($rows as $idx => $projet){
+      $qte = $projet['qte'] ?? '';
+      $pu  = ($qte!=='ENS' && $qte!=='') ? ($projet['prix_unit_htv'] ?? '') : ($projet['prixForfitaire'] ?? '');
+      if (($projet['prixForfitaire'] ?? '') !== '') {
+        $pth = (float)$projet['prixForfitaire'];
+      } else {
+        $pth = ($qte!=='ENS' && $qte!=='') ? (float)($projet['qte'] ?? 0) * (float)($projet['prix_unit_htv'] ?? 0)
+                                           : (float)($projet['prixForfitaire'] ?? 0);
+      }
+      $totalHT += $pth;
+      $desc = $projet['projet_classement'] ?? ($projet['classement'] ?? ($projet['projet_designation'] ?? ($projet['designation'] ?? '')));
+      $desc = trim((string)$desc);
+      if ($desc === '') { $desc = 'INSPECTION PERIODIQUE'; }
+
+      $puDisplay  = '';
+      $pthDisplay = null;
+      if ($idx === $ensIndexAll) {
+        $pthDisplay = $allTotalHT;
+      }
+
+      echo '<tr class="item-row">';
+      echo '<td class="desc" contenteditable="true">'.htmlspecialchars($desc).'</td>';
+      echo '<td class="t-center" contenteditable="true">'.htmlspecialchars($qte).'</td>';
+      echo '<td class="t-center" contenteditable="true">'.htmlspecialchars($puDisplay).'</td>';
+      echo '<td class="t-right" contenteditable="true">'.($pthDisplay !== null ? number_format($pthDisplay,3,'.','') : '').'</td>';
+      echo '</tr>';
+    }
+  } else {
+    // Non forfaitaire: keep per-line PU/PTH
+    foreach ($rows as $projet){
+      $qte = $projet['qte'] ?? '';
+      $pu  = ($qte!=='ENS' && $qte!=='') ? ($projet['prix_unit_htv'] ?? '') : ($projet['prixForfitaire'] ?? '');
+      if (($projet['prixForfitaire'] ?? '') !== '') {
         $pth = (float)$projet['prixForfitaire'];
       } else {
         $pth = ($qte!=='ENS' && $qte!=='') ? (float)($projet['qte'] ?? 0) * (float)($projet['prix_unit_htv'] ?? 0)
@@ -122,27 +302,6 @@ if (!empty($addressLabels)) {
       echo '<td class="t-right" contenteditable="true">'.number_format($pth,3,'.','').'</td>';
       echo '</tr>';
     }
-  }
-} else {
-  foreach ($rows as $projet){
-    $qte = $projet['qte'] ?? '';
-    $pu  = ($qte!=='ENS' && $qte!=='') ? ($projet['prix_unit_htv'] ?? '') : ($projet['prixForfitaire'] ?? '');
-    if ($verifForfitaireOffre === 'forfitaire' && ($projet['prixForfitaire'] ?? '') !== '') {
-      $pth = (float)$projet['prixForfitaire'];
-    } else {
-      $pth = ($qte!=='ENS' && $qte!=='') ? (float)($projet['qte'] ?? 0) * (float)($projet['prix_unit_htv'] ?? 0)
-                                         : (float)($projet['prixForfitaire'] ?? 0);
-    }
-    $totalHT += $pth;
-    $desc = $projet['projet_classement'] ?? ($projet['classement'] ?? ($projet['projet_designation'] ?? ($projet['designation'] ?? '')));
-    $desc = trim((string)$desc);
-    if ($desc === '') { $desc = 'INSPECTION PERIODIQUE'; }
-    echo '<tr class="item-row">';
-    echo '<td class="desc" contenteditable="true">'.htmlspecialchars($desc).'</td>';
-    echo '<td class="t-center" contenteditable="true">'.htmlspecialchars($qte).'</td>';
-    echo '<td class="t-center" contenteditable="true">'.htmlspecialchars($pu).'</td>';
-    echo '<td class="t-right" contenteditable="true">'.number_format($pth,3,'.','').'</td>';
-    echo '</tr>';
   }
 }
 $serverRenderedRows = trim(ob_get_clean());
