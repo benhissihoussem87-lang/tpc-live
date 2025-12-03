@@ -110,8 +110,10 @@ $(function(){
 <script>
 // Always-on writing mode: make the invoice content editable for on-page tweaks.
 document.addEventListener('DOMContentLoaded', function(){
-  var root = document.querySelector('.container') || document.body;
-  root.setAttribute('contenteditable', 'true');
+  var root = document.querySelector('.container');
+  if (root) {
+    root.setAttribute('contenteditable', 'true');
+  }
 });
 </script>
 <style>

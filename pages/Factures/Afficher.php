@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 include 'class/client.class.php';
 include 'class/Reglements.class.php';
 include 'class/Projet.class.php';
@@ -25,7 +25,7 @@ if (!empty($factures)) {
 $factureYears = array_keys($factureYears);
 rsort($factureYears, SORT_STRING);
 
-// G├®n├®rer le numOffre
+// Générer le numOffre
 $anne=date('Y');
 		if($factures){
 			$nb=count($factures);	
@@ -66,9 +66,9 @@ $anne=date('Y');
 									<input type="search" id="facturesSearch" class="form-control" placeholder="Rechercher une facture, client, exonoration..." autocomplete="off">
 								</div>
 								<div class="col-md-3">
-									<label for="factureYearFilter" class="form-label">Filtrer par annÃ©e</label>
+									<label for="factureYearFilter" class="form-label">Filtrer par annǸe</label>
 									<select id="factureYearFilter" class="form-control">
-										<option value="">Toutes les annÃ©es</option>
+										<option value="">Toutes les annǸes</option>
 										<?php foreach ($factureYears as $y) { ?>
 											<option value="<?= htmlspecialchars($y) ?>"><?= htmlspecialchars($y) ?></option>
 										<?php } ?>
@@ -93,8 +93,8 @@ $anne=date('Y');
 											<th >Num Facture</th>
 											<th >Date Facture</th>
 											<th >Client</th>
-                                            <th >Num├®ro Bon de commande Client</th>
-											<th >Num├®ro Exonoration</th>
+                                            <th >Numéro Bon de commande Client</th>
+											<th >Numéro Exonoration</th>
                                              <th >Etat Reglement</th>
 											    <th >Type Reglement</th>
 											
@@ -416,8 +416,12 @@ document.addEventListener('DOMContentLoaded', function(){
 												   
 												   </td>
 												   <td>
-												   
-												   <a href="./pages/Factures/ModeleFacture.php?facture=<?=$key['num_fact']?>">Imprimer</a></td>
+												   <a
+                             href="./pages/Factures/ModeleFacture.php?facture=<?= urlencode($key['num_fact']) ?>"
+                             class="facture-print-link"
+                             onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;"
+                           >Imprimer</a>
+                           </td>
 											 </tr>
 									<?php }}?>
 									 </tbody>
