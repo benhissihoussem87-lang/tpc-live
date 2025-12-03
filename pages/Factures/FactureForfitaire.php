@@ -34,22 +34,7 @@ $forfaitLinesPrefill = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_REQUEST['btnSubmitAjoutFactureForfitaire'])) {
   $rawLines = isset($_POST['lignes']) && is_array($_POST['lignes']) ? $_POST['lignes'] : [];
   $forfaitLinesPrefill = tpc_prepare_forfait_lines_prefill($rawLines);
-
-  // Accept free-text projects; just require non-empty projet + prix
-  $validLines = [];
-  foreach ($rawLines as $ln) {
-    if (!is_array($ln)) continue;
-    $proj = trim((string)($ln['projet'] ?? ''));
-    $prix = trim((string)($ln['prix'] ?? ''));
-    $adr  = trim((string)($ln['adresse'] ?? ''));
-    if ($proj === '' || $prix === '') continue;
-    $validLines[] = [
-      'projet' => $proj,
-      'projet_id' => $proj, // free text accepted
-      'prix_raw' => $prix,
-      'adresse' => $adr,
-    ];
-  }
+  $validLines = tpc_extract_valid_forfait_lines($rawLines);
 
   if (empty($validLines)) {
     $forfaitFormErrors[] = "Ajoutez au moins une ligne avec un projet et un prix forfaitaire.";
@@ -74,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_REQUEST['btnSubmitAjoutFact
         $seenAddress[$adrKey] = true;
 
         $qteFlag   = $isFirstForAdr ? 'ENS' : '';
-        $pidOrText = $line['projet_id'];
+        $pidOrText = $line['projet'];
 
         $facture->AjoutProjets_Facture(
           $Numero_Facture,
