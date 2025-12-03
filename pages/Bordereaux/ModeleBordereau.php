@@ -1,5 +1,5 @@
-﻿<?php
-/* Bordereau ÔÇö A4, self-pagination, fully editable, 3 base rows, print button only
+<?php
+/* Bordereau — A4, self-pagination, fully editable, 3 base rows, print button only
    D.E stays as "xx/xx/2025" (user can edit it). The small "Date :" shows the DB date. */
 
 function e($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
@@ -196,7 +196,7 @@ while (count($rows) < 3) {
 </head>
 <body>
 
-<!-- Hidden ÔÇ£sourceÔÇØ rows (will be updated as you type) -->
+<!-- Hidden “source” rows (will be updated as you type) -->
 <table style="display:none"><tbody id="rows-src">
 <?php foreach ($rows as $r): ?>
   <tr data-idx>
@@ -245,13 +245,13 @@ while (count($rows) < 3) {
   <div class="content">
     <div class="info-card">
       <div class="info-grid">
-        <div><strong>R├®f :</strong> <span contenteditable="true"><?= e($ref) ?></span></div>
+        <div><strong>Réf :</strong> <span contenteditable="true"><?= e($ref) ?></span></div>
         <!-- CHANGED: Date comes from DB and is NOT editable -->
         <div><strong>Date :</strong> <span id="dateField"><?= e($displayDate) ?></span></div>
-        <div class="attn"><strong>├Ç lÔÇÖattention de :</strong> <span contenteditable="true"><?= e($attn) ?></span></div>
+        <div class="attn"><strong>À l’attention de :</strong> <span contenteditable="true"><?= e($attn) ?></span></div>
       </div>
     </div>
-    <div class="section" contenteditable="true">Veuillez trouver ci-jointes les pi├¿ces suivantes :</div>
+    <div class="section" contenteditable="true">Veuillez trouver ci-jointes les pièces suivantes :</div>
   </div>
 </template>
 
@@ -259,8 +259,8 @@ while (count($rows) < 3) {
   <table class="items">
     <thead>
       <tr>
-        <th class="col-num" contenteditable="true">N┬░</th>
-        <th contenteditable="true">D├®signation</th>
+        <th class="col-num" contenteditable="true">N°</th>
+        <th contenteditable="true">Désignation</th>
         <th class="col-nb" contenteditable="true">Nombres exemplaires</th>
         <th class="col-obs" contenteditable="true">Observations</th>
       </tr>
@@ -272,11 +272,11 @@ while (count($rows) < 3) {
 <template id="bottom-tpl">
   <div class="bottom-block">
     <?php if (!$facturePlacedInTable && $numFact !== ''): ?>
-    <div class="facture-info"><strong>Facture N┬░:</strong> <span><?= e($numFact) ?></span></div>
+    <div class="facture-info"><strong>Facture N°:</strong> <span><?= e($numFact) ?></span></div>
     <?php endif; ?>
     <div class="signs">
       <div class="sign">
-        <h4 contenteditable="true">├ëMETTEUR</h4>
+        <h4 contenteditable="true">ÉMETTEUR</h4>
         <div class="hint" contenteditable="true">(Nom / Visa &amp; cachet)</div>
         <div class="box" contenteditable="true"></div>
       </div>
@@ -288,9 +288,9 @@ while (count($rows) < 3) {
     </div>
     <div class="company" contenteditable="true">
       <div><b>T.P.C : TUNISIA POLYCONTROLS</b></div>
-      <div>S.A.R.L. au capital de 20.000 DT ÔÇô Code T.V.A : 1426729 H/A/M/000 ÔÇô R.C. : B 2621285205</div>
-      <div>BUREAU : 5 Rue Benghazi ÔÇô Bureau 4.5 ÔÇô 4<sup>├¿me</sup> ├ëtage ÔÇô 1002 Tunis</div>
-      <div>T├®l : 36 131 731 ÔÇô GSM : 24 131 544 ÔÇô Email : tunisia.polycontrols.tpc@gmail.com</div>
+      <div>S.A.R.L. au capital de 20.000 DT – Code T.V.A : 1426729 H/A/M/000 – R.C. : B 2621285205</div>
+      <div>BUREAU : 5 Rue Benghazi – Bureau 4.5 – 4<sup>ème</sup> Étage – 1002 Tunis</div>
+      <div>Tél : 36 131 731 – GSM : 24 131 544 – Email : tunisia.polycontrols.tpc@gmail.com</div>
     </div>
   </div>
 </template>
@@ -425,3 +425,4 @@ while (count($rows) < 3) {
 </script>
 </body>
 </html>
+
