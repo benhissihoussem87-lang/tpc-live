@@ -315,15 +315,20 @@ html,body{ background:#f6f6f6; margin:0; color:#111; font-family:var(--font) }
 <template id="tpl-totals">
   <div class="totals">
     <div class="labels">
-      <div>Total H.T</div><div>taux de t.v.a</div><div>t.v.a</div><div>t.t.c</div><div>droit de timbre</div><div>total</div>
+      <div>Total H.T</div>
+      <div>taux de t.v.a</div>
+      <div>t.v.a</div>
+      <div>t.t.c</div>
+      <div>droit de timbre</div>
+      <div>total</div>
     </div>
     <div class="values">
-      <div><?= number_format($totalHT,3,'.','') ?></div>
-      <div><?= $isExonore ? '0%' : '19%' ?></div>
-      <div><?= number_format($tva,3,'.','') ?></div>
-      <div><?= number_format($ttc,3,'.','') ?></div>
-      <div><?= number_format($timbre,3,'.','') ?></div>
-      <div><?= number_format($hon,3,'.','') ?></div>
+      <div contenteditable="true"><?= number_format($totalHT,3,'.','') ?></div>
+      <div contenteditable="true"><?= $isExonore ? '0%' : '19%' ?></div>
+      <div contenteditable="true"><?= number_format($tva,3,'.','') ?></div>
+      <div contenteditable="true"><?= number_format($ttc,3,'.','') ?></div>
+      <div contenteditable="true"><?= number_format($timbre,3,'.','') ?></div>
+      <div contenteditable="true"><?= number_format($hon,3,'.','') ?></div>
     </div>
   </div>
 </template>
