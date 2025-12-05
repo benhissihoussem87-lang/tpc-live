@@ -293,6 +293,88 @@ public function get_All_AdressesClient_ProjetsByOffre($offre){
 
 		return $rows;
 	}
+
+	/**
+	 * Compute a lightweight type map for a list of offre numbers.
+	 * Returns an array: [ 'NUM/ANNEE' => 'forfitaire' | 'Nonforfitaire' ]
+	 * based on the presence of prixForfitaire vs prix_unit_htv in
+	 * offres_projets and (as a fallback) facture_projets.
+	 */
+	public function getTypesForOffreNumbers(array $nums){
+		// Normalize and deduplicate numbers
+		$clean = [];
+		foreach ($nums as $n) {
+			$val = trim((string)$n);
+			if ($val !== '') {
+				$clean[$val] = true;
+			}
+		}
+		if (empty($clean)) {
+			return [];
+		}
+
+		$keys   = array_keys($clean);
+		$count  = count($keys);
+		$inList = implode(',', array_fill(0, $count, '?'));
+
+		$typeFlags = []; // num_offre => ['has_forfait'=>bool,'has_unit'=>bool]
+
+		try {
+			// From offres_projets
+			$sql1 = "
+				SELECT offre,
+				       MAX(CASE WHEN prixForfitaire IS NOT NULL AND prixForfitaire <> '' THEN 1 ELSE 0 END) AS has_forfait,
+				       MAX(CASE WHEN prix_unit_htv IS NOT NULL AND prix_unit_htv <> '' THEN 1 ELSE 0 END) AS has_unit
+				FROM offres_projets
+				WHERE offre IN ($inList)
+				GROUP BY offre
+			";
+			$st1 = $this->cnx->prepare($sql1);
+			$st1->execute($keys);
+			foreach ($st1->fetchAll() as $row) {
+				$k = (string)$row['offre'];
+				if (!isset($typeFlags[$k])) {
+					$typeFlags[$k] = ['has_forfait' => false, 'has_unit' => false];
+				}
+				$typeFlags[$k]['has_forfait'] = $typeFlags[$k]['has_forfait'] || ((int)$row['has_forfait'] === 1);
+				$typeFlags[$k]['has_unit']    = $typeFlags[$k]['has_unit']    || ((int)$row['has_unit'] === 1);
+			}
+
+			// From facture_projets (legacy mirror when offres_projets is empty)
+			$sql2 = "
+				SELECT facture AS num_offre,
+				       MAX(CASE WHEN prixForfitaire IS NOT NULL AND prixForfitaire <> '' THEN 1 ELSE 0 END) AS has_forfait,
+				       MAX(CASE WHEN prix_unit_htv IS NOT NULL AND prix_unit_htv <> '' THEN 1 ELSE 0 END) AS has_unit
+				FROM facture_projets
+				WHERE facture IN ($inList)
+				GROUP BY facture
+			";
+			$st2 = $this->cnx->prepare($sql2);
+			$st2->execute($keys);
+			foreach ($st2->fetchAll() as $row) {
+				$k = (string)$row['num_offre'];
+				if (!isset($typeFlags[$k])) {
+					$typeFlags[$k] = ['has_forfait' => false, 'has_unit' => false];
+				}
+				$typeFlags[$k]['has_forfait'] = $typeFlags[$k]['has_forfait'] || ((int)$row['has_forfait'] === 1);
+				$typeFlags[$k]['has_unit']    = $typeFlags[$k]['has_unit']    || ((int)$row['has_unit'] === 1);
+			}
+		} catch (\Exception $e) {
+			// In case of any SQL error, fall back to an empty map so the listing still works.
+			return [];
+		}
+
+		$result = [];
+		foreach ($typeFlags as $num => $flags) {
+			if (!empty($flags['has_forfait'])) {
+				$result[$num] = 'forfitaire';
+			} elseif (!empty($flags['has_unit'])) {
+				$result[$num] = 'Nonforfitaire';
+			}
+		}
+
+		return $result;
+	}
 // Delete All Projet By Offre 
 
 	public function delete_All_Projets_By_Offre($offre){

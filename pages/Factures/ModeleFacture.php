@@ -139,4 +139,3 @@ if ($verifForfitaireFacture=='Nonforfitaire') {
   // Fallback to non-forfaitaire to avoid blank page when detection is inconclusive
   include_once 'ModeleFactureNonForfitaire.php';
 }
-?>

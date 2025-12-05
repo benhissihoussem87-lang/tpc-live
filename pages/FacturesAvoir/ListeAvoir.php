@@ -43,13 +43,13 @@ if ($selectedYear !== '') {
 
 <div class="card shadow mb-4">
   <div style="width:100%;text-align:center" class="col-12 mb-3">
-    <a href="?Avoir&Add" class="btn btn-primary mr-2">Ajouter Avoir (d├®taill├®)</a>
+    <a href="?Avoir&Add" class="btn btn-primary mr-2">Ajouter Avoir (détaill├®)</a>
     <a href="?Avoir&AddForfaitaire" class="btn btn-outline-primary">Ajouter Avoir Forfaitaire</a>
   </div>
   <div class="card-body">
     <div class="row mb-3">
       <div class="col-md-3">
-        <label for="avoirYearFilter" class="form-label">Filtrer par ann├®e</label>
+        <label for="avoirYearFilter" class="form-label">Filtrer par année</label>
         <select id="avoirYearFilter" class="form-control">
           <option value="">Toutes les ann├®es</option>
           <?php foreach ($avoirYears as $year): ?>

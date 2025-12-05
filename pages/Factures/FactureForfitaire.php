@@ -51,6 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_REQUEST['btnSubmitAjoutFact
 
       // Offer header mirror
       $offre->Ajout($Numero_Facture, $dateFacture, $clientId);
+      // As with non-forfaitaire invoices, ensure that if an Offre de Prix with
+      // this number already existed (e.g. after reusing a deleted facture
+      // number), any old project lines are purged so we only keep the ones
+      // from this new facture.
+      if (method_exists($offre, 'delete_All_Projets_By_Offre')) {
+        $offre->delete_All_Projets_By_Offre($Numero_Facture);
+      }
 
       $seenAddress = [];
       foreach ($validLines as $line) {

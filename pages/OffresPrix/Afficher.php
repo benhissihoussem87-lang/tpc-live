@@ -3,6 +3,22 @@ include_once 'class/OffresPrix.class.php';
 include_once 'class/client.class.php';
 $clients=$clt->getAllClients();
 $offres=$offre->AfficherOffres();
+// Pre-compute offer types (forfitaire / nonforfitaire) in one go
+$offreTypeMap = [];
+if (!empty($offres)) {
+    $nums = [];
+    foreach ($offres as $row) {
+        if (isset($row['num_offre'])) {
+            $val = trim((string)$row['num_offre']);
+            if ($val !== '') {
+                $nums[$val] = true;
+            }
+        }
+    }
+    if (!empty($nums) && method_exists($offre, 'getTypesForOffreNumbers')) {
+        $offreTypeMap = $offre->getTypesForOffreNumbers(array_keys($nums));
+    }
+}
 // Build year list from displayed date column and optional filter (client-side)
 $selectedYear = '';
 $offreYears = [];
@@ -249,16 +265,8 @@ document.addEventListener('DOMContentLoaded', function(){
                                     <tbody>
 									<?php if(!empty($offres)){
 										foreach($offres as $key){
-						/********************/
- $ProjetsOffre=$offre->get_AllProjets_ByOffre($key['num_offre'], $key['id_offre']);
- 
- // Verification si l'offre est forfitaire ou non 
- $verifForfitaireOffre=null;
- if(!empty($ProjetsOffre)){foreach($ProjetsOffre as $projet){
- 	if($projet['prixForfitaire']!=''){$verifForfitaireOffre='forfitaire'; break;}
- 	else if($projet['prix_unit_htv']!=''){$verifForfitaireOffre='Nonforfitaire'; break;}
- 	
- }}
+ $offreNum = isset($key['num_offre']) ? (string)$key['num_offre'] : '';
+ $verifForfitaireOffre = $offreTypeMap[$offreNum] ?? null;
  $modifUrl = "?Offres_Prix&modifier={$key['num_offre']}&idoffre={$key['id_offre']}";
  if ($verifForfitaireOffre === 'forfitaire') {
 	$modifUrl = "?Offres_Prix&modifierOffreForfitaire={$key['num_offre']}&idoffre={$key['id_offre']}";
@@ -369,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function(){
 		 </div>
 		<div class="modal-body row">
 		<?php
-		$adressesOffre=$offre->getAdresseOffreProjetByOffre($key['num_offre']);
+		// reuse $adressesOffre computed above for this offer
 		?>
 		<h1><?//=count($adressesOffre)?></h1>
 		 <div class="mb-3 col-6">

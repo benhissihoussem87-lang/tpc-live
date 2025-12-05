@@ -240,7 +240,10 @@ html,body{ background:#f6f6f6; margin:0; color:#111; font-family:var(--font) }
 
 /* ===== Legal block ===== */
 .legal{
-  border-top:1px solid #000; padding-top:3mm; font-size:3mm; margin-top:3mm
+  border-top:1px solid #000;
+  padding-top:3mm;
+  font-size:3mm;
+  margin-top:auto; /* push footer to bottom of page */
 }
 .legal .cols{ display:grid; grid-template-columns:62% 36%; gap:2% }
 .legal p{ margin:2mm 0 }
@@ -685,16 +688,20 @@ html,body{ background:#f6f6f6; margin:0; color:#111; font-family:var(--font) }
 </div>
 
 <script>
-/* ========= Pagination: no split rows, cloned header, Page i / N ========= */
+/* ========= Simple pagination: fixed rows per page (no split rows) ========= */
 (function(){
   const sheetsRoot = document.getElementById('sheets');
   const rowsSrc    = Array.from(document.querySelectorAll('#rows-body > tr'));
-  const EPS = 2;
+  if (!sheetsRoot || rowsSrc.length === 0) return;
+
+  // Max project rows on first page, and on subsequent pages
+  const MAX_FIRST_PAGE_ROWS  = 5;
+  const MAX_OTHER_PAGE_ROWS  = 20;
 
   const createSheet = () => {
     const s = document.createElement('div');
     s.className = 'sheet';
-    s.append( document.getElementById('tpl-header').content.cloneNode(true) );
+    s.append(document.getElementById('tpl-header').content.cloneNode(true));
     const tableFrag = document.getElementById('tpl-table').content.cloneNode(true);
     s.append(tableFrag);
     return s;
@@ -708,63 +715,51 @@ html,body{ background:#f6f6f6; margin:0; color:#111; font-family:var(--font) }
 
   const getTBody = (sheet) => sheet.querySelector('tbody');
 
-  const fits = (container, node) => {
-    container.append(node);
-    const sheet = container.classList?.contains('sheet') ? container : container.closest('.sheet');
-    const ok = (sheet.scrollHeight - sheet.clientHeight) <= EPS;
-    if (!ok) node.remove();
-    return ok;
-  };
-
   const sheets = [];
+  let sheetIndex = 0;
   let sheet = createSheet();
-  addClientTo(sheet);
   sheetsRoot.appendChild(sheet);
   sheets.push(sheet);
+  addClientTo(sheet);
 
-  for (const row of rowsSrc){
-    const clone = row.cloneNode(true);
-    if (!fits(getTBody(sheet), clone)){
+  let rowIndex = 0;
+  while (rowIndex < rowsSrc.length) {
+    const maxRows = (sheetIndex === 0) ? MAX_FIRST_PAGE_ROWS : MAX_OTHER_PAGE_ROWS;
+    const tbody   = getTBody(sheet);
+    let count     = tbody.children.length;
+
+    while (count < maxRows && rowIndex < rowsSrc.length) {
+      tbody.appendChild(rowsSrc[rowIndex].cloneNode(true));
+      rowIndex++;
+      count++;
+    }
+
+    if (rowIndex < rowsSrc.length) {
+      // More rows remaining => new sheet
+      sheetIndex++;
       sheet = createSheet();
       sheetsRoot.appendChild(sheet);
       sheets.push(sheet);
-      if (!fits(getTBody(sheet), clone)){
-        getTBody(sheet).appendChild(clone);
-      }
     }
   }
 
-  let last = sheets[sheets.length-1];
+  // Append totals + amount in words + signature on the last sheet only
+  const last = sheets[sheets.length - 1];
+  last.append(document.getElementById('tpl-totals').content.cloneNode(true));
+  last.append(document.getElementById('tpl-amount').content.cloneNode(true));
+  last.append(document.getElementById('tpl-signature').content.cloneNode(true));
 
-  const totalsFrag = document.getElementById('tpl-totals').content.cloneNode(true);
-  if (!fits(last, totalsFrag)){ last = createSheet(); sheetsRoot.appendChild(last); sheets.push(last); }
-  last.append(totalsFrag);
-
-  const amountFrag = document.getElementById('tpl-amount').content.cloneNode(true);
-  if (!fits(last, amountFrag)){ last = createSheet(); sheetsRoot.appendChild(last); sheets.push(last); }
-  last.append(amountFrag);
-
-  const signatureFrag = document.getElementById('tpl-signature').content.cloneNode(true);
-  if (!fits(last, signatureFrag)){ last = createSheet(); sheetsRoot.appendChild(last); sheets.push(last); }
-  last.append(signatureFrag);
-
-  const legalFrag = document.getElementById('tpl-legal').content.cloneNode(true);
-  if (!fits(last, legalFrag)){ last = createSheet(); sheetsRoot.appendChild(last); sheets.push(last); }
-  last.append(legalFrag);
-
-  Array.from(sheetsRoot.children).forEach((sh, idx)=>{
-    if (idx===0) return;
-    const rowsCount   = (sh.querySelector('tbody')?.children.length) || 0;
-    const hasBlocks   = sh.querySelector('.totals, .amount-letters, .signature, .legal');
-    if (rowsCount===0 && !hasBlocks) sh.remove();
+  // Attach the legal/footer block to every sheet so the footer is present
+  sheets.forEach(sh => {
+    sh.append(document.getElementById('tpl-legal').content.cloneNode(true));
   });
 
-  const N = sheetsRoot.children.length;
+  const N = sheets.length;
   if (N === 1) document.body.classList.add('single-sheet');
-  Array.from(sheetsRoot.children).forEach((s, idx)=>{
-    const i = idx+1;
-    s.querySelectorAll('.page-i').forEach(n=>n.textContent = String(i));
-    s.querySelectorAll('.page-n').forEach(n=>n.textContent = String(N));
+  sheets.forEach((s, idx) => {
+    const i = idx + 1;
+    s.querySelectorAll('.page-i').forEach(n => n.textContent = String(i));
+    s.querySelectorAll('.page-n').forEach(n => n.textContent = String(N));
   });
 })();
 </script>

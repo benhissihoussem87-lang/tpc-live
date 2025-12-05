@@ -65,6 +65,7 @@ class Factures {
         // Do it in a transaction so we don't leave partial state.
         try {
             $this->cnx->beginTransaction();
+            $num = (string)$num;
 
             // Remove payment records before dropping the facture itself so
             // orphaned entries don't linger in the `reglement` table.
@@ -79,6 +80,14 @@ class Factures {
             // Also clean detail lines if no FK is present
             $stLines = $this->cnx->prepare("DELETE FROM facture_projets WHERE facture = :num");
             $stLines->execute([':num' => $num]);
+
+            // Mirror cleanup on the offer side: remove any Offre de Prix
+            // whose number matches this facture, plus its project lines.
+            $stOffreLines = $this->cnx->prepare("DELETE FROM offres_projets WHERE offre = :num");
+            $stOffreLines->execute([':num' => $num]);
+
+            $stOffre = $this->cnx->prepare("DELETE FROM offre_prix WHERE num_offre = :num");
+            $stOffre->execute([':num' => $num]);
 
             // Finally delete the facture itself
             $st = $this->cnx->prepare("DELETE FROM facture WHERE num_fact = :num");

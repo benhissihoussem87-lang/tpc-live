@@ -92,6 +92,14 @@ if (isset($_REQUEST['btnSubmitAjout'])) {
     // Insert the new invoice using the posted number
     if ($facture->Ajout(@$_POST['num_fact'], @$_POST['client'], @$_POST['numboncommande'], @$_POST['date'], @$_POST['reglement'])) {
 
+      // If an offre with this number already exists (for example because an
+      // older facture with the same num_fact was deleted and the sequence
+      // reused), drop all its project lines so the new offre only reflects
+      // the projects of this freshly created facture.
+      if (method_exists($offre, 'delete_All_Projets_By_Offre')) {
+        $offre->delete_All_Projets_By_Offre(@$_POST['num_fact']);
+      }
+
       if ($_POST['reglement'] === 'non') {
         $reglement->Ajout(@$_POST['client'], @$_POST['num_fact'], '', @$_POST['reglement'], '', '', '', '', '', '', '');
       }
