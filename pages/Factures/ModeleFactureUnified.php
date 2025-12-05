@@ -506,11 +506,28 @@ html,body{ background:#f6f6f6; margin:0; color:#111; font-family:var(--font) }
         }
         foreach ($linesForAddr as $idx => $projet) {
           $qte  = $projet['qte'] ?? '';
-          $prixUnit = $projet['prix_unit_htv'] ?? '';
+          $prixUnit    = $projet['prix_unit_htv'] ?? '';
           $prixForfait = $projet['prixForfitaire'] ?? '';
-          $prixTTC = $projet['prixTTC'] ?? '';
-          $pu   = $prixForfait !== '' ? $prixForfait : $prixUnit;
-          $pth  = $prixForfait !== '' ? $prixForfait : (($projet['qte'] ?? 0) * ($prixUnit !== '' ? $prixUnit : 0));
+          $prixTTC     = $projet['prixTTC'] ?? '';
+
+          // Secure computation of unit and total HT:
+          // - Use forfait value when present
+          // - Else only multiply qte * unit when both are numeric
+          $pu        = $prixForfait !== '' ? $prixForfait : $prixUnit;
+          $qtyRaw    = $projet['qte'] ?? null;
+          $qty       = (is_scalar($qtyRaw) && $qtyRaw !== '' && $qtyRaw !== 'ENS' && is_numeric($qtyRaw))
+                        ? (float)$qtyRaw
+                        : null;
+          $unitValue = ($prixUnit !== '' && is_numeric($prixUnit)) ? (float)$prixUnit : null;
+
+          if ($prixForfait !== '' && $prixForfait !== null) {
+            $pth = (float)$prixForfait;
+          } elseif ($qty !== null && $unitValue !== null) {
+            $pth = $qty * $unitValue;
+          } else {
+            $pth = null;
+          }
+
           if ((!isset($pth) || $pth === '' || !is_numeric($pth)) && $prixTTC !== '') {
             $rate = $isExonore ? 0.0 : 0.19;
             $pth = $rate > 0 ? ((float)$prixTTC / (1.0 + $rate)) : (float)$prixTTC;
