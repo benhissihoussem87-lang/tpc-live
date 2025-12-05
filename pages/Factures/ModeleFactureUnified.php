@@ -131,8 +131,11 @@ html,body{ background:#f6f6f6; margin:0; color:#111; font-family:var(--font) }
   .sheets{ margin:0 }
   .sheet{
     box-shadow:none;
-    min-height:auto !important;
-    height:auto !important;
+    /* Keep a fixed A4-height sheet on print so the
+       footer (.legal with margin-top:auto) stays at
+       the real bottom of every printed page. */
+    min-height:var(--sheet-h);
+    height:var(--sheet-h);
     margin:0 !important;
     padding:9.5mm;
     break-inside:avoid; page-break-inside:avoid;
@@ -694,8 +697,10 @@ html,body{ background:#f6f6f6; margin:0; color:#111; font-family:var(--font) }
   const rowsSrc    = Array.from(document.querySelectorAll('#rows-body > tr'));
   if (!sheetsRoot || rowsSrc.length === 0) return;
 
-  // Max project rows on first page, and on subsequent pages
-  const MAX_FIRST_PAGE_ROWS  = 5;
+  // Max project rows on first page, and on subsequent pages.
+  // First page can safely show more rows (no totals/signature yet),
+  // so use a higher cap to visually fill the page.
+  const MAX_FIRST_PAGE_ROWS  = 12;
   const MAX_OTHER_PAGE_ROWS  = 20;
 
   const createSheet = () => {
@@ -722,11 +727,46 @@ html,body{ background:#f6f6f6; margin:0; color:#111; font-family:var(--font) }
   sheets.push(sheet);
   addClientTo(sheet);
 
+  // Precompute group sizes so that address headers (and any other
+  // rows marked data-kind="section") stay on the same sheet as
+  // their detail rows whenever they all fit on one page.
+  const groupSize = new Array(rowsSrc.length).fill(1);
+  for (let i = 0; i < rowsSrc.length; ) {
+    const row = rowsSrc[i];
+    if (row.dataset && row.dataset.kind === 'section') {
+      let j = i + 1;
+      while (j < rowsSrc.length && !(rowsSrc[j].dataset && rowsSrc[j].dataset.kind === 'section')) {
+        j++;
+      }
+      const size = j - i;
+      for (let k = i; k < j; k++) groupSize[k] = size;
+      i = j;
+    } else {
+      groupSize[i] = 1;
+      i++;
+    }
+  }
+
   let rowIndex = 0;
   while (rowIndex < rowsSrc.length) {
     const maxRows = (sheetIndex === 0) ? MAX_FIRST_PAGE_ROWS : MAX_OTHER_PAGE_ROWS;
     const tbody   = getTBody(sheet);
     let count     = tbody.children.length;
+
+    // If the next row is a section header and its whole group would
+    // overflow the current sheet, start a new sheet before placing it.
+    const row      = rowsSrc[rowIndex];
+    const isHeader = row.dataset && row.dataset.kind === 'section';
+    const gSize    = groupSize[rowIndex] || 1;
+    if (isHeader && count > 0 && (count + gSize) > maxRows) {
+      // Start a new sheet for this section header, but only the first
+      // sheet carries the client block; do not duplicate it on later pages.
+      sheetIndex++;
+      sheet = createSheet();
+      sheetsRoot.appendChild(sheet);
+      sheets.push(sheet);
+      continue;
+    }
 
     while (count < maxRows && rowIndex < rowsSrc.length) {
       tbody.appendChild(rowsSrc[rowIndex].cloneNode(true));
@@ -735,7 +775,7 @@ html,body{ background:#f6f6f6; margin:0; color:#111; font-family:var(--font) }
     }
 
     if (rowIndex < rowsSrc.length) {
-      // More rows remaining => new sheet
+      // More rows remaining => new sheet (without repeating client box)
       sheetIndex++;
       sheet = createSheet();
       sheetsRoot.appendChild(sheet);
